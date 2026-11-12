@@ -654,7 +654,19 @@ impl ConstructorField {
                 dc
             }
         };
+        if self.encoder == "fixed8" {
+            return self.find_fixed8_decoder(dec);
+        }
         dec
+    }
+    // "fixed8": an 8-bit type sent as exactly 8 bits rather than a varint.
+    // Keeps the varint decoder's signedness and output type.
+    pub fn find_fixed8_decoder(&self, varint_decoder: Decoder) -> Decoder {
+        match varint_decoder {
+            Decoder::SignedDecoder => Decoder::Fixed8SignedDecoder,
+            Decoder::Unsigned64Decoder => Decoder::Fixed8Unsigned64Decoder,
+            _ => Decoder::Fixed8UnsignedDecoder,
+        }
     }
     pub fn find_qangle_decoder(&self) -> Decoder {
         match self.var_name.as_str() {

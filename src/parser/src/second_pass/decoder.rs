@@ -21,6 +21,9 @@ pub enum Decoder {
     FloatCoordDecoder,
     FloatSimulationTimeDecoder,
     Fixed64Decoder,
+    Fixed8UnsignedDecoder,
+    Fixed8SignedDecoder,
+    Fixed8Unsigned64Decoder,
     QanglePitchYawDecoder,
     Qangle3Decoder(u8),
     QangleVarDecoder,
@@ -57,6 +60,9 @@ impl<'a> Bitreader<'a> {
             VectorNormalDecoder => Ok(Variant::VecXYZ(self.decode_normal_vec()?)),
             Unsigned64Decoder => Ok(Variant::U64(self.read_varint_u_64()?)),
             Fixed64Decoder => Ok(Variant::U64(self.decode_uint64()?)),
+            Fixed8UnsignedDecoder => Ok(Variant::U32(self.read_nbits(8)?)),
+            Fixed8SignedDecoder => Ok(Variant::I32(self.read_nbits(8)? as u8 as i8 as i32)),
+            Fixed8Unsigned64Decoder => Ok(Variant::U64(self.read_nbits(8)? as u64)),
             VectorFloatCoordDecoder => Ok(Variant::VecXYZ(self.decode_vector_float_coord()?)),
             AmmoDecoder => Ok(Variant::U32(self.decode_ammo()?)),
             QanglePresDecoder => Ok(Variant::VecXYZ(self.decode_qangle_variant_pres()?)),
@@ -432,6 +438,17 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn fixed8_reads_exactly_eight_bits() {
+        let qf_map = QfMapper { idx: 0, map: AHashMap::default() };
+        let bytes = [0xff, 0x05, 0x80, 0x01];
+        let mut r = Bitreader::new(&bytes);
+        assert_eq!(r.decode(&Fixed8SignedDecoder, &qf_map).unwrap(), Variant::I32(-1));
+        assert_eq!(r.decode(&Fixed8UnsignedDecoder, &qf_map).unwrap(), Variant::U32(5));
+        assert_eq!(r.decode(&Fixed8Unsigned64Decoder, &qf_map).unwrap(), Variant::U64(0x80));
+        assert_eq!(r.read_nbits(8).unwrap(), 1);
     }
 
     #[test]
